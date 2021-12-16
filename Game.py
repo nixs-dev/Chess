@@ -19,7 +19,7 @@ class Game:
         'Rook': Rook.Rook
     }
 
-    initial_pieces_loaction = {
+    initial_pieces_location = {
         'white': {
                 'Pawn': [(6, 0), (6, 1), (6, 2), (6, 3), (6, 4), (6, 5), (6, 6), (6, 7)],
                 'Rook': [(7, 0), (7, 7)],
@@ -38,6 +38,11 @@ class Game:
         }
     }
 
+    selected_set = None
+    selected_piece = None
+    move_sets = None
+    player_turn = 'white'
+
     def __init__(self):
         pygame.init()
         self.window = pygame.display.set_mode(self.window_size)
@@ -52,6 +57,8 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.run = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    self.check_clicked()
 
             self.window.fill((255, 255, 255))
             self.draw_board()
@@ -62,6 +69,33 @@ class Game:
 
         pygame.quit()
 
+    def check_clicked(self):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+
+        # Sets clicks
+
+        if pygame.mouse.get_pressed()[0]:
+            for x, row in enumerate(self.sets_rects):
+                for y, rect in enumerate(row):
+                    if rect.collidepoint(mouse_x, mouse_y):
+                        if self.move_sets is not None and (x, y) in self.move_sets:
+                            matrix_new_coordinate = (x, y)
+                            set_rect = self.sets_rects[matrix_new_coordinate[0]][matrix_new_coordinate[1]]
+                            set_rect_coordinates = (set_rect.x, set_rect.y)
+
+                            self.pieces_location = self.selected_piece.move(matrix_new_coordinate, set_rect_coordinates)
+
+                            self.selected_set = None
+                            self.selected_piece = None
+                            self.move_sets = None
+
+                        elif self.pieces_location[x][y] is not None:
+                            self.selected_set = (x, y)
+                            self.selected_piece = self.pieces_location[x][y]
+
+                            available_moves = self.selected_piece.move_ways()
+                            self.move_sets = [move for move in available_moves]
+
     def load_pieces(self):
         for x in range(8):
             row = []
@@ -71,11 +105,11 @@ class Game:
 
             self.pieces_location.append(row)
 
-        for color in self.initial_pieces_loaction:
-            for piece in self.initial_pieces_loaction[color]:
-                for location in self.initial_pieces_loaction[color][piece]:
+        for color in self.initial_pieces_location:
+            for piece in self.initial_pieces_location[color]:
+                for location in self.initial_pieces_location[color][piece]:
                     pos = (self.sets_rects[location[0]][location[1]].x, self.sets_rects[location[0]][location[1]].y)
-                    new_piece = self.pieces[piece](color, pos)
+                    new_piece = self.pieces[piece](color, pos, self.pieces_location)
 
                     self.pieces_location[location[0]][location[1]] = new_piece
 
@@ -95,6 +129,15 @@ class Game:
                 pos_y = sets_height * x + x  # ???
 
                 color = (255, 255, 255) if set_color else (0, 0, 0)
+
+                if self.selected_set is not None:
+                    if self.selected_set == (x, y):
+                        color = (0, 255, 0)
+
+                if self.move_sets is not None:
+                    if (x, y) in self.move_sets:
+                        color = (0, 0, 255)
+
                 rect = pygame.Rect(pos_x, pos_y, sets_width, sets_height)
                 retangle = pygame.draw.rect(self.window, color, rect)
                 row.append(retangle)
